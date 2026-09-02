@@ -1,0 +1,13 @@
+{
+  "clients": [
+    {
+      "id": "client-001",
+      "name": "Client 001",
+      "proxyUsername": "client-001",
+      "proxyPassword": "REMPLACER_PAR_UN_SECRET_LONG",
+      "dashboardToken": "REMPLACER_PAR_UN_TOKEN_LONG",
+      "admin": false,
+      "enabled": true
+    }
+  ]
+}

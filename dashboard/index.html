@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>EcoData — Tableau de bord</title>
+  <link rel="stylesheet" href="/dashboard.css">
+  <link rel="stylesheet" href="/upstreams.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="EcoData accueil">
+        <span class="brand-mark"><i></i><i></i><i></i></span>
+        <span><strong>EcoData</strong><small>Proxy observatory</small></span>
+      </a>
+      <div class="actions">
+        <div class="live-pill"><span class="pulse"></span><span id="connectionLabel">Connexion…</span></div>
+        <button class="icon-button" id="pauseButton" type="button" aria-label="Suspendre les actualisations" title="Suspendre">Ⅱ</button>
+        <button class="reset-button" id="resetButton" type="button">Réinitialiser</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div><p class="eyebrow">IMPACT DE LA SESSION</p><h1>Moins de données.<br><span>Plus d’efficacité.</span></h1></div>
+        <div class="hero-meta"><span>Dernière actualisation</span><strong id="updatedAt">—</strong><small>Actualisation toutes les 2 secondes</small></div>
+      </section>
+
+      <section class="metrics" aria-label="Indicateurs principaux">
+        <article class="metric metric-featured"><div class="metric-icon">↓</div><p>Données économisées</p><strong id="bytesSaved">0 o</strong><div class="progress"><i id="savedProgress"></i></div><small id="savedPercent">0 % du volume image</small></article>
+        <article class="metric"><div class="metric-top"><p>Requêtes</p><span>↗</span></div><strong id="requests">0</strong><small id="hostCount">0 domaine observé</small></article>
+        <article class="metric"><div class="metric-top"><p>Images optimisées</p><span>◫</span></div><strong id="imagesCompressed">0</strong><small id="averageSaving">0 o économisé / image</small></article>
+        <article class="metric"><div class="metric-top"><p>Trackers bloqués</p><span>⊘</span></div><strong id="trackersStripped">0</strong><small>Scripts et iframes retirés</small></article>
+      </section>
+
+      <section class="grid-main">
+        <article class="panel chart-panel">
+          <header><div><p class="panel-kicker">TEMPS RÉEL</p><h2>Activité du proxy</h2></div><div class="chart-legend"><span><i class="dot mint"></i>Requêtes</span><span><i class="dot violet"></i>Économies</span></div></header>
+          <div class="chart-wrap"><svg id="activityChart" viewBox="0 0 800 260" preserveAspectRatio="none" role="img" aria-label="Historique d'activité"></svg><div class="empty-chart" id="chartEmpty">L’activité apparaîtra ici</div></div>
+        </article>
+        <article class="panel efficiency-panel">
+          <header><div><p class="panel-kicker">RENDEMENT</p><h2>Efficacité globale</h2></div></header>
+          <div class="gauge" id="gauge"><div><strong id="efficiency">0%</strong><span>économisé</span></div></div>
+          <div class="efficiency-row"><span>Volume original</span><strong id="bytesOriginal">0 o</strong></div>
+          <div class="efficiency-row"><span>Volume servi</span><strong id="bytesServed">0 o</strong></div>
+          <div class="efficiency-row"><span>Ratio de compression</span><strong id="compressionRatio">0×</strong></div>
+        </article>
+      </section>
+
+      <section class="grid-bottom">
+        <article class="panel hosts-panel">
+          <header><div><p class="panel-kicker">RÉPARTITION</p><h2>Activité par domaine</h2></div><span class="count-badge" id="hostsBadge">0 hôte</span></header>
+          <div class="table-wrap"><table><thead><tr><th>Domaine</th><th>Requêtes</th><th>Images</th><th>Trackers</th><th>Économie</th></tr></thead><tbody id="hostsTable"></tbody></table><div class="table-empty" id="hostsEmpty">Aucun trafic intercepté pour le moment.</div></div>
+        </article>
+        <article class="panel health-panel">
+          <header><div><p class="panel-kicker">SANTÉ</p><h2>État du réseau</h2></div></header>
+          <div class="health-item"><span class="health-icon good">✓</span><div><strong>Proxy actif</strong><small id="proxyStatus">Collecte en cours</small></div></div>
+          <div class="health-item"><span class="health-icon warning">↗</span><div><strong>Domaines en bypass</strong><small id="bypassSummary">Aucun domaine</small></div><b id="bypassCount">0</b></div>
+          <div class="health-item"><span class="health-icon neutral">≋</span><div><strong>Encodages ignorés</strong><small id="encodingSummary">Aucun encodage</small></div><b id="encodingCount">0</b></div>
+          <div class="host-list" id="bypassList"></div>
+        </article>
+      </section>
+      <section class="panel upstream-panel">
+        <header><div><p class="panel-kicker">ROUTAGE SORTANT</p><h2>Proxys upstream</h2></div><span class="count-badge" id="upstreamBadge">Mode direct</span></header>
+        <div class="upstream-grid">
+          <div class="field"><label for="upstreamMode">Mode</label><select id="upstreamMode"><option value="direct">Connexion directe</option><option value="round-robin">Rotation round-robin</option></select></div>
+          <label class="switch-field"><input id="fallbackDirect" type="checkbox" checked><span></span><div><strong>Fallback direct</strong><small>Connexion directe si tous les upstreams sont indisponibles</small></div></label>
+          <div class="field proxy-field"><label for="proxyUrls">Proxys — un par ligne</label><textarea id="proxyUrls" rows="5" spellcheck="false" placeholder="http://utilisateur:motdepasse@proxy-1.example:8080&#10;http://proxy-2.example:3128"></textarea><small>Formats acceptés : http:// et https://. Les identifiants peuvent être inclus dans l’URL.</small></div>
+          <div class="upstream-actions"><div id="upstreamRuntime" class="runtime-list"></div><button id="saveUpstreams" class="save-button" type="button">Enregistrer</button></div>
+        </div>
+      </section>
+      <section class="panel users-panel" id="usersPanel" hidden>
+        <header><div><p class="panel-kicker">ADMINISTRATION</p><h2>Utilisateurs</h2></div><button id="newUser" class="save-button" type="button">Créer un utilisateur</button></header>
+        <div class="user-summary"><span id="userCount">0 utilisateur</span><span id="activeUserCount">0 actif</span><span id="adminCount">0 administrateur</span></div>
+        <div class="table-wrap"><table class="users-table"><thead><tr><th>Utilisateur</th><th>Identifiant proxy</th><th>Rôle</th><th>État</th><th>Actions</th></tr></thead><tbody id="usersTable"></tbody></table></div>
+      </section>
+    </main>
+    <footer><span>EcoData MITM · session locale</span><span id="footerStatus">En attente de données</span></footer>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <dialog id="userDialog"><form method="dialog" id="userForm"><div class="dialog-head"><div><p class="panel-kicker">COMPTE CLIENT</p><h2 id="userDialogTitle">Créer un utilisateur</h2></div><button value="cancel" class="dialog-close" aria-label="Fermer">×</button></div><input type="hidden" id="editUserId"><div class="form-grid"><div class="field"><label for="userName">Nom</label><input id="userName" maxlength="80" required></div><div class="field"><label for="userId">Identifiant</label><input id="userId" maxlength="40" pattern="[a-z0-9][a-z0-9_-]{1,39}" required></div><div class="field"><label for="proxyUsername">Utilisateur proxy</label><input id="proxyUsername" maxlength="80" required></div><label class="switch-field"><input id="userAdmin" type="checkbox"><span></span><div><strong>Administrateur</strong><small>Accès à toute la configuration</small></div></label><label class="switch-field"><input id="userEnabled" type="checkbox" checked><span></span><div><strong>Compte actif</strong><small>Autorise le proxy et le dashboard</small></div></label></div><div class="dialog-actions"><button value="cancel" class="reset-button">Annuler</button><button id="saveUser" value="default" class="save-button">Enregistrer</button></div></form></dialog>
+  <dialog id="credentialsDialog"><div class="dialog-head"><div><p class="panel-kicker">À CONSERVER</p><h2>Identifiants générés</h2></div><button class="dialog-close" data-close-credentials aria-label="Fermer">×</button></div><p class="credentials-warning">Copiez ces secrets maintenant. Ils ne seront plus affichés ensuite.</p><div class="credential"><span>Mot de passe proxy</span><code id="createdProxyPassword"></code></div><div class="credential"><span>Lien dashboard</span><code id="createdDashboardLink"></code></div><div class="dialog-actions"><button id="copyCredentials" class="save-button" type="button">Tout copier</button></div></dialog>
+  <script src="/dashboard.js" defer></script>
+</body>
+</html>
