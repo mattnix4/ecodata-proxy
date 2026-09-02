@@ -1,6 +1,6 @@
 importScripts("config.js");
 const DEPLOYMENT = self.ECODATA_CONFIG || {};
-const DEFAULTS = { host: DEPLOYMENT.proxyHost || "127.0.0.1", port: DEPLOYMENT.proxyPort || 8081, dashboardUrl: DEPLOYMENT.dashboardUrl || "http://127.0.0.1:8082", directList: [], connected: false };
+const DEFAULTS = { scheme: DEPLOYMENT.proxyScheme === "https" ? "https" : "http", host: DEPLOYMENT.proxyHost || "127.0.0.1", port: DEPLOYMENT.proxyPort || 8081, dashboardUrl: DEPLOYMENT.dashboardUrl || "http://127.0.0.1:8082", directList: [], connected: false };
 let proxySessionRefresh;
 function normalizeDirectList(value) { const entries = Array.isArray(value) ? value : String(value || "").split(","); return [...new Set(entries.map(item => String(item).trim().toLowerCase()).filter(item => item && /^[a-z0-9.*:_-]+$/.test(item)))].slice(0, 100); }
 function dashboardHost(dashboardUrl) { try { return new URL(dashboardUrl).hostname; } catch { return ""; } }
@@ -59,7 +59,7 @@ async function applyProxy(session) {
     value: {
       mode: "fixed_servers",
       rules: {
-        singleProxy: { scheme: "http", host: session.host, port: Number(session.port) },
+        singleProxy: { scheme: session.scheme, host: session.host, port: Number(session.port) },
         bypassList: [...new Set(["localhost", "127.0.0.1", session.host, dashboardHost(session.dashboardUrl), ...normalizeDirectList(session.directList)].filter(Boolean))]
       }
     }
@@ -136,7 +136,7 @@ chrome.runtime.onStartup.addListener(async () => applyProxy(await currentSession
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "connect") {
-    const session = { host: DEFAULTS.host, port: DEFAULTS.port, dashboardUrl: DEFAULTS.dashboardUrl, directList: normalizeDirectList(message.directList), username: message.username.trim(), password: message.password, connected: true };
+    const session = { scheme: DEFAULTS.scheme, host: DEFAULTS.host, port: DEFAULTS.port, dashboardUrl: DEFAULTS.dashboardUrl, directList: normalizeDirectList(message.directList), username: message.username.trim(), password: message.password, connected: true };
     if (!session.host || !session.username || !session.password || !Number.isInteger(session.port) || session.port < 1 || session.port > 65535) { sendResponse({ ok: false, error: "Paramètres de connexion invalides" }); return; }
     loginClient(session).then(async identity => { session.clientId = identity.clientId; session.proxySessionUsername = identity.proxySession.username; session.proxySessionPassword = identity.proxySession.password; session.directList = await loadClientDirectList(identity.clientId); return fetchClientStats(session); }).then(data => chrome.storage.local.set(session).then(() => applyProxy(session)).then(() => sendResponse({ ok: true, data }))).catch(error => sendResponse({ ok: false, error: error.message }));
     return true;

@@ -99,8 +99,9 @@ Avant de distribuer l'extension, configurez
 
 ```js
 self.ECODATA_CONFIG = {
+  proxyScheme: "https",
   proxyHost: "proxy.example.com",
-  proxyPort: 8081,
+  proxyPort: 443,
   dashboardUrl: "https://ecodata.example.com"
 };
 ```
@@ -108,6 +109,112 @@ self.ECODATA_CONFIG = {
 `proxyHost` contient uniquement un nom d'hôte, sans `http://` ou `https://`.
 `dashboardUrl` contient au contraire l'URL HTTPS complète, sans slash final
 obligatoire.
+
+## HAProxy 443 et LXC, sans stunnel EcoData
+
+Le proxy EcoData est situé dans le LXC `192.168.1.60:8081`. Ce port parle le
+protocole proxy HTTP en clair. Il ne doit donc jamais recevoir directement le
+handshake TLS public.
+
+Le port public `443` étant partagé avec d'autres services, HAProxy fonctionne
+en deux niveaux :
+
+1. inspection SNI du flux TLS public sur `0.0.0.0:443` ;
+2. terminaison TLS EcoData sur le frontend HAProxy local
+   `127.0.0.1:8444`, puis transmission du flux déchiffré au LXC.
+
+Dans l'extension :
+
+```js
+self.ECODATA_CONFIG = {
+  proxyScheme: "https",
+  proxyHost: "ecodata.dorints.dpdns.org",
+  proxyPort: 443,
+  dashboardUrl: "https://ecodash.dorints.dpdns.org"
+};
+```
+
+Configuration HAProxy :
+
+```haproxy
+frontend https_router
+    bind 0.0.0.0:443
+    mode tcp
+
+    tcp-request inspect-delay 5s
+    tcp-request content accept if { req.ssl_hello_type 1 }
+
+    use_backend ssh_backend if { payload(0,7) -m bin 5353482D322E30 }
+    use_backend https_proxy if { req.ssl_sni -i https-proxy.dorints.dpdns.org }
+    use_backend socks_backend if { req.ssl_sni -i socks.dorints.dpdns.org }
+    use_backend ecodata_tls_entry if { req.ssl_sni -i ecodata.dorints.dpdns.org }
+
+    default_backend websites
+
+# Le flux EcoData est encore chiffré à ce niveau.
+backend ecodata_tls_entry
+    mode tcp
+    server local_tls 127.0.0.1:8444
+
+# HAProxy termine ici le TLS public du proxy EcoData.
+frontend ecodata_tls_terminator
+    bind 127.0.0.1:8444 ssl crt /etc/haproxy/certs/ecodata.pem ssl-min-ver TLSv1.2
+    mode tcp
+    default_backend ecodata_mitm_backend
+
+# Le flux est maintenant le protocole proxy HTTP en clair.
+backend ecodata_mitm_backend
+    mode tcp
+    server ecodata_lxc 192.168.1.60:8081 check
+```
+
+Le service existant `https-proxy.dorints.dpdns.org` peut continuer à utiliser
+stunnel sur `127.0.0.1:8443`. EcoData utilise `8444`, ce qui évite tout conflit
+de port.
+
+### Certificat TLS public HAProxy
+
+Créez un fichier PEM contenant le certificat public et sa clé :
+
+```bash
+sudo mkdir -p /etc/haproxy/certs
+sudo sh -c 'cat \
+/etc/letsencrypt/live/ecodata.dorints.dpdns.org/fullchain.pem \
+/etc/letsencrypt/live/ecodata.dorints.dpdns.org/privkey.pem \
+> /etc/haproxy/certs/ecodata.pem'
+sudo chmod 600 /etc/haproxy/certs/ecodata.pem
+```
+
+Ce certificat protège la connexion Chrome → proxy. Il est distinct du
+certificat racine MITM EcoData utilisé pour signer dynamiquement les
+certificats des sites visités.
+
+Après chaque renouvellement Let's Encrypt, reconstruisez `ecodata.pem`, puis
+rechargez HAProxy.
+
+### Validation HAProxy et proxy
+
+```bash
+sudo haproxy -c -f /etc/haproxy/haproxy.cfg
+sudo systemctl restart haproxy
+sudo ss -lntp | grep -E ':443|:8443|:8444'
+```
+
+Les listeners attendus sont HAProxy sur `443` et `8444`. stunnel peut rester
+sur `8443` pour l'autre service.
+
+Testez ensuite la chaîne complète :
+
+```bash
+printf 'CONNECT example.com:443 HTTP/1.1\r\nHost: example.com:443\r\n\r\n' |
+openssl s_client \
+  -quiet \
+  -connect ecodata.dorints.dpdns.org:443 \
+  -servername ecodata.dorints.dpdns.org
+```
+
+Sans identifiants, le résultat attendu est
+`HTTP/1.1 407 Proxy Authentication Required`.
 
 ## Certificat MITM
 
