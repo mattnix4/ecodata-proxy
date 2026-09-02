@@ -1,5 +1,5 @@
 self.ECODATA_CONFIG = {
-  proxyHost: "127.0.0.1",
-  proxyPort: 8081,
-  dashboardUrl: "http://127.0.0.1:8082"
+  proxyHost: "ecodata.dorints.dpdns.org",
+  proxyPort: 443,
+  dashboardUrl: "https://ecodash.dorints.dpdns.org"
 };

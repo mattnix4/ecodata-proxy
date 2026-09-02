@@ -382,6 +382,8 @@ const DASHBOARD_ASSETS = {
   "/dashboard.css": ["dashboard.css", "text/css; charset=utf-8"],
   "/upstreams.css": ["upstreams.css", "text/css; charset=utf-8"],
   "/dashboard.js": ["dashboard.js", "application/javascript; charset=utf-8"],
+  "/favicon.ico": ["favicon.ico", "image/x-icon"],
+  "/favicon.png": ["favicon.png", "image/png"],
 };
 
 function sendJson(res, statusCode, payload) {
@@ -391,6 +393,27 @@ function sendJson(res, statusCode, payload) {
     "X-Content-Type-Options": "nosniff",
   });
   res.end(JSON.stringify(payload, null, 2));
+}
+
+const configuredExtensionOrigins = new Set(
+  String(process.env.EXTENSION_ORIGINS || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean)
+);
+
+function allowExtensionCors(req, res) {
+  const origin = String(req.headers.origin || "");
+  const allowed = configuredExtensionOrigins.size
+    ? configuredExtensionOrigins.has(origin)
+    : /^chrome-extension:\/\/[a-p]{32}$/.test(origin);
+  if (!allowed) return false;
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Client-Id, X-EcoData-User, X-EcoData-Password, X-EcoData-Device");
+  res.setHeader("Access-Control-Max-Age", "600");
+  res.setHeader("Vary", "Origin");
+  return true;
 }
 
 function readJson(req, limit = 64 * 1024) {
@@ -420,6 +443,13 @@ function dashboardClient(req) {
 http
   .createServer((req, res) => {
     const requestUrl = new URL(req.url, "http://127.0.0.1");
+    const extensionApi = requestUrl.pathname.startsWith("/api/extension/");
+    const extensionOriginAllowed = extensionApi && allowExtensionCors(req, res);
+    if (extensionApi && req.method === "OPTIONS") {
+      if (!extensionOriginAllowed) return sendJson(res, 403, { error: "Origine extension non autorisée" });
+      res.writeHead(204);
+      return res.end();
+    }
     const client = requestUrl.pathname.startsWith("/api/") ? dashboardClient(req) : null;
 
     if (requestUrl.pathname === "/api/extension/stats" && req.method === "GET") {
