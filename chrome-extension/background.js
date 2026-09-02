@@ -3,6 +3,7 @@ const DEPLOYMENT = self.ECODATA_CONFIG || {};
 const DEFAULTS = { host: DEPLOYMENT.proxyHost || "127.0.0.1", port: DEPLOYMENT.proxyPort || 8081, dashboardUrl: DEPLOYMENT.dashboardUrl || "http://127.0.0.1:8082", directList: [], connected: false };
 let proxySessionRefresh;
 function normalizeDirectList(value) { const entries = Array.isArray(value) ? value : String(value || "").split(","); return [...new Set(entries.map(item => String(item).trim().toLowerCase()).filter(item => item && /^[a-z0-9.*:_-]+$/.test(item)))].slice(0, 100); }
+function dashboardHost(dashboardUrl) { try { return new URL(dashboardUrl).hostname; } catch { return ""; } }
 
 async function loadClientDirectList(clientId) {
   const stored = await chrome.storage.local.get(["clientDirectLists", "directList"]);
@@ -59,7 +60,7 @@ async function applyProxy(session) {
       mode: "fixed_servers",
       rules: {
         singleProxy: { scheme: "http", host: session.host, port: Number(session.port) },
-        bypassList: [...new Set(["localhost", "127.0.0.1", session.host, ...normalizeDirectList(session.directList)])]
+        bypassList: [...new Set(["localhost", "127.0.0.1", session.host, dashboardHost(session.dashboardUrl), ...normalizeDirectList(session.directList)].filter(Boolean))]
       }
     }
   });

@@ -32,6 +32,10 @@ utilisez une exposition TCP/stream ou un forward proxy compatible, pas une
 simple route HTTP d’un reverse proxy. Faites suivre les en-têtes personnalisés
 `X-EcoData-*` et `Authorization` vers le dashboard.
 
+Le nom d’hôte défini dans `dashboardUrl` est automatiquement ajouté à la liste
+de contournement Chrome, comme `localhost` et `127.0.0.1`. Les appels de
+connexion et de statistiques ne repassent donc jamais par le proxy EcoData.
+
 ## Installation locale
 
 1. Ouvrir `chrome://extensions` dans Chrome.
