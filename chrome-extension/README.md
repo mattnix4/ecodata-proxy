@@ -14,6 +14,24 @@ self.ECODATA_CONFIG = {
 
 Les valeurs locales par défaut sont `127.0.0.1:8081` pour le proxy et `http://127.0.0.1:8082` pour le dashboard.
 
+Pour un déploiement distant, le serveur écoute par défaut sur `0.0.0.0` pour
+les ports `8081` et `8082`. Construisez l’extension avec l’adresse réellement
+joignable par Chrome dans `config.js` :
+
+```js
+self.ECODATA_CONFIG = {
+  proxyHost: "proxy.example.com",
+  proxyPort: 8081,
+  dashboardUrl: "https://ecodata.example.com"
+};
+```
+
+Le dashboard HTTP (`8082`) peut être publié derrière un reverse proxy HTTPS
+classique. Le proxy navigateur (`8081`) doit accepter la méthode `CONNECT` :
+utilisez une exposition TCP/stream ou un forward proxy compatible, pas une
+simple route HTTP d’un reverse proxy. Faites suivre les en-têtes personnalisés
+`X-EcoData-*` et `Authorization` vers le dashboard.
+
 ## Installation locale
 
 1. Ouvrir `chrome://extensions` dans Chrome.

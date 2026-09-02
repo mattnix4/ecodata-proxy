@@ -17,8 +17,8 @@ const clients = require("./src/clientManager");
 
 const PORT = process.env.MITM_PORT || 8081;
 const STATS_PORT = process.env.STATS_PORT || 8082;
-const PROXY_HOST = process.env.PROXY_HOST || "127.0.0.1";
-const DASHBOARD_HOST = process.env.DASHBOARD_HOST || "127.0.0.1";
+const PROXY_HOST = process.env.PROXY_HOST || "0.0.0.0";
+const DASHBOARD_HOST = process.env.DASHBOARD_HOST || "0.0.0.0";
 const DASHBOARD_DIR = path.join(__dirname, "dashboard");
 const ROOT_CA_PATH = path.join(process.cwd(), ".ecodata-mitm-certs", "certs", "ca.pem");
 
@@ -371,7 +371,7 @@ proxy.onRequest((ctx, callback) => {
 });
 
 proxy.listen({ port: PORT, host: PROXY_HOST, sslCaDir: process.cwd() + "/.ecodata-mitm-certs", httpsAgent: strictHttpsAgent }, () => {
-  console.log(`Proxy MITM éco-data démarré sur 127.0.0.1:${PORT}`);
+  console.log(`Proxy MITM éco-data démarré sur ${PROXY_HOST}:${PORT}`);
   console.log(`Certificat racine à installer : ${process.cwd()}/.ecodata-mitm-certs/certs/ca.pem`);
 });
 
